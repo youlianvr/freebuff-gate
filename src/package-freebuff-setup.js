@@ -60,6 +60,7 @@ function runCommand(command, args, options = {}) {
     stdio: options.stdio || 'pipe',
     cwd: options.cwd,
     env: options.env,
+    shell: options.shell,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) {
@@ -179,7 +180,11 @@ function buildBinary(options = {}) {
     if (target.platform === 'darwin' && process.platform === 'darwin' && options.removeSignature !== false) {
       command('codesign', ['--remove-signature', artifact], { stdio: 'pipe' });
     }
-    command(options.postjectCommand || 'npx', injectArgs(target, artifact, blobFile), { stdio: 'pipe' });
+    // On Windows the npx shim is npx.cmd, which spawnSync cannot launch
+    // directly (EINVAL) — it must run through the shell (cmd.exe). Use the
+    // shell for the postject step so npx.cmd resolves on win32.
+    const postjectCmd = options.postjectCommand || (process.platform === 'win32' ? 'npx.cmd' : 'npx');
+    command(postjectCmd, injectArgs(target, artifact, blobFile), { stdio: 'pipe', shell: true });
     return { version, target: targetId, artifact };
   } finally {
     fs.rmSync(stagingDir, { recursive: true, force: true });
