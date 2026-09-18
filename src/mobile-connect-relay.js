@@ -24,6 +24,7 @@ const {
   rejectUpgrade,
 } = require('./mobile-connect-websocket');
 const { createApnsProvider } = require('./mobile-push-apns');
+const { servePairPage } = require('./mobile-pair-page');
 
 const DEFAULT_HOST = '127.0.0.1';
 const DEFAULT_PORT = 8795;
@@ -1028,6 +1029,13 @@ function createRelayServer(options = {}) {
             protocolVersion: 1,
             connectors: hub.connectors.size,
           }, requestOptions);
+          return;
+        }
+        if (req.method === 'GET' && pathname === '/pair') {
+          // Browser pairing: the page claims the pairing request from the URL
+          // fragment and exchanges the access token for a session cookie,
+          // mirroring what the Android app does natively.
+          servePairPage(res, requestOptions);
           return;
         }
         if (req.method === 'POST' && pathname === '/v1/relay/enroll') {
